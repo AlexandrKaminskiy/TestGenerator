@@ -93,7 +93,7 @@ namespace Analyser
                     string fileContent = generatedUsingsDeclaration.NormalizeWhitespace().ToFullString()
                         + "\r\n"
                         + generatedNsDeclaration.WithMembers(generatedClassDeclaration).NormalizeWhitespace().ToFullString();
-                    result.Add(new GeneratedValuesInfo.FileInfo(fileName, fileContent));
+                    result.Add(new FileInfo(fileName, fileContent));
                 }
             }
             return result;

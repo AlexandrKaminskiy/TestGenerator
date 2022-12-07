@@ -6,41 +6,31 @@ namespace Tests
 {
     public class Tests
     {
+
         private string classFolder;
         private string generatedClassFolder;
         [SetUp]
         public async Task SetupAsync()
         {
-            generatedClassFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\TestClasses\\GeneratedClasses"));
-            string testClassesFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\TestClasses"));
+            generatedClassFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\ClassesForTest\\GeneratedSources"));
+            string testClassesFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\ClassesForTest"));
             var allTestClasses = new List<string>();
             foreach (string path in Directory.GetFiles(testClassesFolder, "*.cs"))
             {
                 allTestClasses.Add(path);
             }
 
-            classFolder = Path.Combine(testClassesFolder, "GeneratedClasses");
+            classFolder = Path.Combine(testClassesFolder, "GeneratedSources");
             Directory.CreateDirectory(classFolder);
 
             Analyser.TestGenerator generator = new(allTestClasses, classFolder, 3, 3, 3);
             await generator.Generate();
         }
-
         [Test]
-        public void Two_classes_one_ns()
+        public void FileContaining()
         {
-            var classCount = Directory.GetFiles(generatedClassFolder)
-                .Count(file => file.Contains("Class2"));
-            Assert.AreEqual(classCount, 2);
-        }
-
-        [Test]
-        public void One_class_one_ns()
-        {
-            string generatedClassFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\TestClasses\\GeneratedClasses"));
-            var classCount = Directory.GetFiles(generatedClassFolder)
-                .Count(file => file.Contains("Class1"));
-            Assert.AreEqual(classCount, 1);
+            
+            Assert.True(Directory.GetFiles(generatedClassFolder).Length == 3);
         }
 
     }

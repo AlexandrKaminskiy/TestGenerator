@@ -44,7 +44,7 @@ namespace Analyser
 
             var loadClasses = new TransformBlock<string, FileInfo>(new Func<string, Task<FileInfo>>(LoadClasses), loadingFileConcurrencyConstraint);
             var generateTestClasses = new TransformBlock<FileInfo, List<FileInfo>>(new Func<FileInfo, Task<List<FileInfo>>>(GenerateTests), generationClassesConcurrencyConstraing);
-            var writeToFile = new ActionBlock<List<FileInfo>>(new Func<List<FileInfo>, Task>(WriteToFile), writingFilesConcurrencyConstraint);
+            writeToFile = new ActionBlock<List<FileInfo>>(new Func<List<FileInfo>, Task>(WriteToFile), writingFilesConcurrencyConstraint);
 
             var linkOptions = new DataflowLinkOptions() { PropagateCompletion = true };
             loadClasses.LinkTo(generateTestClasses, linkOptions);
@@ -68,7 +68,7 @@ namespace Analyser
             {
                 content = await reader.ReadToEndAsync();
             }
-            return new GeneratedValuesInfo.FileInfo(sourceFile, content);
+            return new FileInfo(sourceFile, content);
         }
 
         private async Task WriteToFile(List<FileInfo> fileInfo)
