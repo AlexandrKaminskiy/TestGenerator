@@ -1,6 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Analyser.GeneratedValuesInfo
+namespace Analyser
 {
     public class MethodInfo
     {

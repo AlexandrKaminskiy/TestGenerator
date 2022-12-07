@@ -22,7 +22,7 @@ namespace Tests
             classFolder = Path.Combine(testClassesFolder, "GeneratedClasses");
             Directory.CreateDirectory(classFolder);
 
-            TestGenerator generator = new(allTestClasses, classFolder, 3, 3, 3);
+            Analyser.TestGenerator generator = new(allTestClasses, classFolder, 3, 3, 3);
             await generator.Generate();
         }
 

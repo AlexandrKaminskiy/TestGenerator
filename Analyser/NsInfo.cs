@@ -1,4 +1,4 @@
-﻿namespace Analyser.GeneratedValuesInfo
+﻿namespace Analyser
 {
     public class NsInfo
     {
@@ -9,6 +9,6 @@
         {
             Name = name;
             ClassInfos = classes;
-        }   
+        }
     }
 }

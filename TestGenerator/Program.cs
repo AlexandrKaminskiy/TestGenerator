@@ -4,8 +4,8 @@ using Analyser;
 string src = Path.GetFullPath(
     Path.Combine(
         Directory
-        .GetCurrentDirectory(), @"..\\..\\..\\..\\TestProject1\\TestClasses"));//fix
-string dest = Path.Combine(src, "GeneratedClasses");
+        .GetCurrentDirectory(), @"..\\..\\..\\..\\TestProject1\\ClassesForTest"));//fix
+string dest = Path.Combine(src, "GeneratedSources");
 
 var classReader = new ClassReader(dest, src);
 List<string> files = classReader.fillFiles();

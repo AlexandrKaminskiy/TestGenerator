@@ -1,4 +1,4 @@
-﻿namespace Analyser.GeneratedValuesInfo
+﻿namespace Analyser
 {
     public class ClassInfo
     {

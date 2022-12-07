@@ -21,4 +21,8 @@
     <ProjectReference Include="..\TestGenerator\TestGenerator.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="ClassesForTest\GeneratedSources\" />
+  </ItemGroup>
+
 </Project>
