@@ -1,34 +1,25 @@
-﻿using TestGeneratorLibrary;
-public class Program
-{
-    static async Task Main()
-    {
-        await Method1();
-    }
+﻿using TestGenerator;
+using Analyser;
 
-    public static async Task Method1()
-    {
-        string filesFolder = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), @"..\\..\\..\\..\\TestProject1\\TestClasses"));
-        string destFolder = Path.Combine(filesFolder, "GeneratedClasses");
-        Directory.CreateDirectory(destFolder);
+string src = Path.GetFullPath(
+    Path.Combine(
+        Directory
+        .GetCurrentDirectory(), @"..\\..\\..\\..\\TestProject1\\TestClasses"));//fix
+string dest = Path.Combine(src, "GeneratedClasses");
 
-        var classFiles = new List<string>();
-        foreach (string path in Directory.GetFiles(filesFolder, "*.cs"))
-        {
-            classFiles.Add(path);
-        }
+var classReader = new ClassReader(dest, src);
+List<string> files = classReader.fillFiles();
 
-        Console.WriteLine("Enter maxFilesToLoadCount: ");
-        var maxFilesToLoadCount = int.Parse(Console.ReadLine());
+Console.WriteLine("Maximum quantity of load files");
+int maxLoad = int.Parse(Console.ReadLine());
 
-        Console.WriteLine("Enter maxExecuteTasksCount: ");
-        var maxExecuteTasksCount = int.Parse(Console.ReadLine());
+Console.WriteLine("Maximum quantity of tasks files");
+int maxExecute = int.Parse(Console.ReadLine());
 
-        Console.WriteLine("Enter maxFilesToWriteCount: ");
-        var maxFilesToWriteCount = int.Parse(Console.ReadLine());
+Console.WriteLine("Maximum quantity of write files");
+int maxWrite = int.Parse(Console.ReadLine());
 
-        TestGenerator generator = new TestGenerator(classFiles, destFolder, maxFilesToLoadCount,
-            maxExecuteTasksCount, maxFilesToWriteCount);
-        await generator.Generate();
-    }
-}
+Analyser.TestGenerator generator = new Analyser.TestGenerator(files, dest, maxLoad,
+    maxExecute, maxWrite);
+
+await generator.Generate();

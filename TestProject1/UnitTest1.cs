@@ -1,6 +1,6 @@
 using NUnit.Framework;
-using static TestGeneratorLibrary.TestGenerator;
-using TestGeneratorLibrary;
+using static Analyser.TestGenerator;
+using Analyser;
 
 namespace Tests
 {

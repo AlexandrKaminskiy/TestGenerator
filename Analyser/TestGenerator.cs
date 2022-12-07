@@ -2,80 +2,100 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Threading.Tasks.Dataflow;
-using TestGeneratorLibrary.GeneratedValuesInfo;
-using MethodInfo = TestGeneratorLibrary.GeneratedValuesInfo.MethodInfo;
+using Analyser.GeneratedValuesInfo;
+using MethodInfo = Analyser.GeneratedValuesInfo.MethodInfo;
 
-namespace TestGeneratorLibrary
+namespace Analyser
 {
     public class TestGenerator
     {
         private List<string> sourceFiles;
         private string destFolder;
-        private ExecutionDataflowBlockOptions loadFileBO;
-        private ExecutionDataflowBlockOptions taskCountBO;
-        private ExecutionDataflowBlockOptions writeFileBO;
-
+        private int loadFileBO;
+        private int taskCountBO;
+        private int writeFileBO;
+        ExecutionDataflowBlockOptions loadingFileConcurrencyConstraint;
+        ExecutionDataflowBlockOptions generationClassesConcurrencyConstraing;
+        ExecutionDataflowBlockOptions writingFilesConcurrencyConstraint;
+        ActionBlock<List<GeneratedValuesInfo.FileInfo>> writeToFile;
         public TestGenerator(List<string> _sourceFiles, string _destFolder, int maxFilesToLoadCount, int maxExecuteTasksCount, int maxFilesToWriteCount)
         {
             sourceFiles = _sourceFiles;
             destFolder = _destFolder;
-            loadFileBO = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = maxFilesToLoadCount };
-            taskCountBO = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = maxExecuteTasksCount };
-            writeFileBO = new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = maxFilesToWriteCount };
+            loadFileBO = maxFilesToLoadCount;
+            taskCountBO = maxExecuteTasksCount;
+            writeFileBO = maxFilesToWriteCount;
         }
-
+        
         public Task Generate()
         {
-            var loadClasses = new TransformBlock<string, CsFileInfo>(new Func<string, Task<CsFileInfo>>(LoadClasses), loadFileBO);
-            var generateTestClasses = new TransformBlock<CsFileInfo, List<CsFileInfo>>(new Func<CsFileInfo, Task<List<CsFileInfo>>>(GenerateTests), taskCountBO);
-            var writeToFile = new ActionBlock<List<CsFileInfo>>(async input => { await WriteToFile(input); }, writeFileBO);
+            InitPipeLine();
+            return writeToFile.Completion;
+        }
+
+        private void InitPipeLine()
+        {
+            loadingFileConcurrencyConstraint = new ExecutionDataflowBlockOptions();
+            generationClassesConcurrencyConstraing = new ExecutionDataflowBlockOptions();
+            writingFilesConcurrencyConstraint = new ExecutionDataflowBlockOptions();
+
+            loadingFileConcurrencyConstraint.MaxDegreeOfParallelism = loadFileBO;
+            generationClassesConcurrencyConstraing.MaxDegreeOfParallelism = taskCountBO;
+            writingFilesConcurrencyConstraint.MaxDegreeOfParallelism = writeFileBO;
+
+            var loadClasses = new TransformBlock<string, GeneratedValuesInfo.FileInfo>(new Func<string, Task<GeneratedValuesInfo.FileInfo>>(LoadClasses), loadingFileConcurrencyConstraint);
+            var generateTestClasses = new TransformBlock<GeneratedValuesInfo.FileInfo, List<GeneratedValuesInfo.FileInfo>>(new Func<GeneratedValuesInfo.FileInfo, Task<List<GeneratedValuesInfo.FileInfo>>>(GenerateTests), generationClassesConcurrencyConstraing);
+            var writeToFile = new ActionBlock<List<GeneratedValuesInfo.FileInfo>>(new Func<List<GeneratedValuesInfo.FileInfo>, Task>(WriteToFile), writingFilesConcurrencyConstraint);
 
             var linkOptions = new DataflowLinkOptions() { PropagateCompletion = true };
             loadClasses.LinkTo(generateTestClasses, linkOptions);
             generateTestClasses.LinkTo(writeToFile, linkOptions);
 
+            FillContainer(loadClasses);
+
+            loadClasses.Complete();
+        }
+        private void FillContainer(TransformBlock<string, GeneratedValuesInfo.FileInfo> loadClasses)
+        {
             foreach (var sourceFile in sourceFiles)
             {
                 loadClasses.Post(sourceFile);
             }
-            loadClasses.Complete();
-
-            return writeToFile.Completion;
         }
 
-        private async Task<CsFileInfo> LoadClasses(string sourceFile)
+        private async Task<GeneratedValuesInfo.FileInfo> LoadClasses(string sourceFile)
         {
             string content;
             using (var reader = new StreamReader(new FileStream(sourceFile, FileMode.Open)))
             {
                 content = await reader.ReadToEndAsync();
             }
-            return new CsFileInfo(sourceFile, content);
+            return new GeneratedValuesInfo.FileInfo(sourceFile, content);
         }
 
-        private async Task WriteToFile(List<CsFileInfo> fileInfo)
+        private async Task WriteToFile(List<GeneratedValuesInfo.FileInfo> fileInfo)
         {
             foreach (var fi in fileInfo)
             {
                 using var writer = new StreamWriter(
                         new FileStream(Path.Combine(destFolder, fi.Name), FileMode.Create));
-                await writer.WriteAsync(fi.Content);
+                await writer.WriteAsync(fi.InnerData);
             }
 
         }
 
-        private async Task<List<CsFileInfo>> GenerateTests(CsFileInfo fi)
+        private async Task<List<GeneratedValuesInfo.FileInfo>> GenerateTests(GeneratedValuesInfo.FileInfo fi)
         {
             return await GenerateCode(fi);
         }
 
-        private async Task<List<CsFileInfo>> GenerateCode(CsFileInfo fi)
+        private async Task<List<GeneratedValuesInfo.FileInfo>> GenerateCode(GeneratedValuesInfo.FileInfo fi)
         {
-            var root = await CSharpSyntaxTree.ParseText(fi.Content).GetRootAsync();
+            var root = await CSharpSyntaxTree.ParseText(fi.InnerData).GetRootAsync();
             return GenerateCodeFromTree(root);
         }
 
-        private List<CsFileInfo> GenerateCodeFromTree(SyntaxNode root)
+        private List<GeneratedValuesInfo.FileInfo> GenerateCodeFromTree(SyntaxNode root)
         {
             var usingDirectives = new List<UsingDirectiveSyntax>(root
                 .DescendantNodes()
@@ -84,7 +104,7 @@ namespace TestGeneratorLibrary
                 .DescendantNodes()
                 .OfType<NamespaceDeclarationSyntax>());
 
-            var nsInfo = new List<NameSpaceInfo>();
+            var nsInfo = new List<NsInfo>();
             foreach (var ns in namespaces)
             {
                 var innerClasses = ns.DescendantNodes().OfType<ClassDeclarationSyntax>();
@@ -94,7 +114,7 @@ namespace TestGeneratorLibrary
                     innerNsClasses.Add(new ClassInfo(innerNsClass.Identifier.ToString(), 
                         GetMethods(innerNsClass)));
                 }
-                nsInfo.Add(new NameSpaceInfo(ns.Name.ToString(), innerNsClasses));
+                nsInfo.Add(new NsInfo(ns.Name.ToString(), innerNsClasses));
             }
             return CodeGenerator.Generate(nsInfo, usingDirectives);
         }
@@ -113,10 +133,10 @@ namespace TestGeneratorLibrary
             return result;
         }
 
-        private List<MethodParameterInfo> GetParameters(MethodDeclarationSyntax method)
+        private List<MethodParams> GetParameters(MethodDeclarationSyntax method)
         {
             return method.ParameterList.Parameters
-                .Select(param => new MethodParameterInfo(param.Identifier.Value.ToString(), param.Type))
+                .Select(param => new MethodParams(param.Identifier.Value.ToString(), param.Type))
                 .ToList();
         }
     }

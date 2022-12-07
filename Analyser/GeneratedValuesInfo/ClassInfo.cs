@@ -1,4 +1,4 @@
-﻿namespace TestGeneratorLibrary.GeneratedValuesInfo
+﻿namespace Analyser.GeneratedValuesInfo
 {
     public class ClassInfo
     {
